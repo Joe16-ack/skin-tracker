@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Anti-Inflammatory & Skin Tracker</title>
+<style>
+  :root {
+    --bg-color: #f7f9fa;
+    --card-bg: #ffffff;
+    --primary: #4a7c59; /* 舒缓的植物绿，符合抗炎主题 */
+    --text: #333333;
+    --accent: #e07a5f;
+  }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background-color: var(--bg-color);
+    color: var(--text);
+    margin: 0;
+    padding: 16px;
+    display: flex;
+    justify-content: center;
+  }
+  .app-container {
+    width: 100%;
+    max-width: 480px;
+    background: var(--card-bg);
+    border-radius: 16px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.05);
+    padding: 20px;
+    box-sizing: border-box;
+  }
+  h2 { text-align: center; color: var(--primary); margin-top: 0; font-size: 22px; }
+  .section { margin-bottom: 24px; }
+  .section-title { font-weight: 600; font-size: 16px; margin-bottom: 12px; color: #555; }
+  
+  /* 拍照区域 */
+  .camera-box {
+    border: 2px dashed #ccc;
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+    cursor: pointer;
+    background: #fafafa;
+    position: relative;
+    overflow: hidden;
+    min-height: 120px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  .camera-box input[type="file"] {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+  }
+  #preview {
+    width: 100%;
+    max-height: 250px;
+    object-fit: cover;
+    border-radius: 8px;
+    display: none;
+    margin-top: 8px;
+  }
+
+  /* 滑块与选项 */
+  .input-group { margin-bottom: 14px; }
+  label { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 6px; }
+  input[type="range"] {
+    width: 100%;
+    accent-color: var(--primary);
+  }
+  .checkbox-group {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  .checkbox-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+  }
+  .checkbox-item input { width: 18px; height: 18px; accent-color: var(--primary); }
+
+  /* 按钮 */
+  button {
+    width: 100%;
+    padding: 14px;
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 4px 6px rgba(74, 124, 89, 0.2);
+  }
+  button:active { transform: scale(0.99); }
+
+  /* 分析结果展示 */
+  #resultBox {
+    margin-top: 20px;
+    padding: 16px;
+    border-radius: 12px;
+    background: #f0f7f4;
+    border-left: 5px solid var(--primary);
+    display: none;
+  }
+  .result-status { font-weight: bold; font-size: 18px; margin-bottom: 8px; color: var(--primary); }
+  .suggestions { font-size: 14px; line-height: 1.5; padding-left: 20px; margin: 0; }
+  .suggestions li { margin-bottom: 6px; }
+</style>
+</head>
+<body>
+
+<div class="app-container">
+  <h2>Skin & Anti-Inflammatory Log</h2>
+  
+  <div class="section">
+    <div class="section-title">📸 1. 拍下今天的皮肤状态 (Selfie Log)</div>
+    <div class="camera-box">
+      <span id="uploadText">点击拍照或上传今日皮肤照片</span>
+      <input type="file" id="cameraInput" accept="image/*" capture="user" onchange="previewImage(this)">
+      <img id="preview" alt="Skin Preview">
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">📊 2. 皮肤当前感知</div>
+    <div class="input-group">
+      <label for="redness">皮肤红肿/发炎敏感度: <span id="rednessVal">3</span>/5</label>
+      <input type="range" id="redness" min="1" max="5" value="3" oninput="document.getElementById('rednessVal').innerText=this.value">
+    </div>
+    <div class="input-group">
+      <label for="breakouts">新长出的痘痘数量: <span id="breakoutsVal">2</span>/5</label>
+      <input type="range" id="breakouts" min="1" max="5" value="2" oninput="document.getElementById('breakoutsVal').innerText=this.value">
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">🌿 3. 今日抗炎行为打卡 (多选)</div>
+    <div class="checkbox-group">
+      <div class="checkbox-item">
+        <input type="checkbox" id="sugarControl">
+        <label for="sugarControl">控糖成功 (无精制糖、无含糖饮料)</label>
+      </div>
+      <div class="checkbox-item">
+        <input type="checkbox" id="water">
+        <label for="water">饮水充足 (饮水总量达 2L 左右)</label>
+      </div>
+      <div class="checkbox-item">
+        <input type="checkbox" id="sleep">
+        <label for="sleep">作息良好 (昨晚睡眠充足/未熬夜)</label>
+      </div>
+      <div class="checkbox-item">
+        <input type="checkbox" id="skincare">
+        <label for="skincare">精简护肤 (使用温和弱酸性洁面及清爽保湿)</label>
+      </div>
+    </div>
+  </div>
+
+  <button onclick="analyzeSkinAndHabits()">生成今日抗炎皮肤分析</button>
+
+  <div id="resultBox">
+    <div class="result-status" id="resultStatus">分析中...</div>
+    <ul class="suggestions" id="suggestionsList"></ul>
+  </div>
+</div>
+
+<script>
+  // 处理照片预览
+  function previewImage(input) {
+    const preview = document.getElementById('preview');
+    const uploadText = document.getElementById('uploadText');
+    if (input.files && input.files[0]) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        preview.src = e.target.result;
+        preview.style.display = 'block';
+        uploadText.style.display = 'none';
+      }
+      reader.readAsDataURL(input.files[0]);
+    }
+  }
+
+  // 分析逻辑
+  function analyzeSkinAndHabits() {
+    // 获取输入数据
+    const redness = parseInt(document.getElementById('redness').value);
+    const breakouts = parseInt(document.getElementById('breakouts').value);
+    
+    const sugarControl = document.getElementById('sugarControl').checked;
+    const water = document.getElementById('water').checked;
+    const sleep = document.getElementById('sleep').checked;
+    const skincare = document.getElementById('skincare').checked;
+
+    const resultBox = document.getElementById('resultBox');
+    const resultStatus = document.getElementById('resultStatus');
+    const suggestionsList = document.getElementById('suggestionsList');
+
+    // 清空上一次的建议
+    suggestionsList.innerHTML = '';
+    resultBox.style.display = 'block';
+
+    let suggestions = [];
+    let score = 0; // 抗炎正面得分
+    if (sugarControl) score++;
+    if (water) score++;
+    if (sleep) score++;
+    if (skincare) score++;
+
+    // 1. 根据皮肤表征和行为生成动态改进建议
+    if (redness >= 4) {
+      suggestions.push("⚠️ <b>检测到皮肤红肿度高：</b>当前屏障可能较脆弱，请务必暂停使用任何高浓度酸类或强效去角质产品，转用温和弱酸性洗面奶，并配合成分精简的啫喱/凝胶状（Gel-based）基础保湿。");
+    }
+    
+    if (breakouts >= 4) {
+      suggestions.push("⚠️ <b>新发痘痘较为活跃：</b>避免用手触摸和挤压。如果痘痘伴随明显的红肿热痛，建议在护肤最后一步局部点涂温和的控痘成分，保持皮肤清爽。");
+    }
+
+    if (!sugarControl) {
+      suggestions.push("❌ <b>控糖警报：</b>高糖食物会导致胰岛素飙升，进而促进皮脂腺分泌，加剧身体的慢性炎症。明天建议严格避开奶茶、小蛋糕和精制碳水，换成低 GI 的全谷物。");
+    }
+
+    if (!sleep) {
+      suggestions.push("❌ <b>作息待改善：</b>熬夜会刺激皮质醇（压力激素）分泌，这是痘痘爆发的催化剂。今晚请务必尝试在 11 点前放下电子设备。");
+    }
+
+    if (!water) {
+      suggestions.push("💧 <b>水分补充不足：</b>身体代谢发炎产物需要充足的水分。明天尝试在书桌或床头放个大水杯，分时段小口高频饮水。");
+    }
+
+    if (!skincare) {
+      suggestions.push("🧼 <b>护肤习惯提示：</b>过度清洁或使用大分子厚重的面霜会堵塞毛孔。控痘期间应坚持“精简、温和、轻薄”的原则。");
+    }
+
+    // 2. 判定整体抗炎状态
+    if (score === 4 && redness <= 2 && breakouts <= 2) {
+      resultStatus.innerText = "🌟 今日状态：抗炎标兵！";
+      suggestionsList.innerHTML = "<li>你的抗炎行为做得非常完美，皮肤状态也相对稳定。请继续保持高纤维、低糖饮食以及良好的睡眠！</li>";
+    } else if (score >= 3) {
+      resultStatus.innerText = "⚖️ 今日状态：稳步维护中";
+      if (suggestions.length === 0) {
+        suggestionsList.innerHTML = "<li>整体习惯良好，皮肤有一些小波动属于正常代谢，继续坚持温和护肤即可。</li>";
+      } else {
+        suggestions.forEach(item => {
+          suggestionsList.innerHTML += `<li>${item}</li>`;
+        });
+      }
+    } else {
+      resultStatus.innerText = "🚨 今日状态：炎症风险偏高";
+      if (suggestions.length === 0) {
+        suggestionsList.innerHTML = "<li>虽然皮肤还没大面积爆发，但今天的抗炎习惯落实较少，建议提早休息，预防痘痘反扑。</li>";
+      } else {
+        suggestions.forEach(item => {
+          suggestionsList.innerHTML += `<li>${item}</li>`;
+        });
+      }
+    }
+
+    // 自动滚动到结果区域
+    resultBox.scrollIntoView({ behavior: 'smooth' });
+  }
+</script>
+
+</body>
+</html>
